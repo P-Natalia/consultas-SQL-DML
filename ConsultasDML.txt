@@ -1,0 +1,144 @@
+-- Base de Datos 1 DML
+-- Se considera la siguiente base de datos relacional, diseñada para un sistema de gestión:
+-- CLIENTE (cod_cli, nombre, ciudad)
+-- PROVEEDOR (cod_prov, nombre, ciudad)
+-- PRODUCTO (cod_prod, nombre, precio, cod_prov)
+-- ORDEN (num_orden, cod_cli, fecha_orden, fecha_entrega)
+-- DETALLE (num_orden, cod_prod, cantidad)
+
+
+-- cod_cli es clave primaria (PK), ya que identifica de manera única a cada cliente.
+-- cod_prov es clave primaria (PK), ya que cada proveedor tiene un código único.
+-- cod_prod es clave primaria (PK), ya que cada producto tiene un código único.
+-- num_orden es clave primaria (PK), ya que cada orden tiene un número único.
+-- (num_orden, cod_prod) es clave primaria compuesta (PK), ya que una orden puede contener múltiples productos,
+-- pero cada combinación de num_orden y cod_prod debe ser única dentro de DETALLE.
+-- Notas adicionales:
+
+-- En PRODUCTO, el atributo cod_prov es clave foránea (FK) referenciando a PROVEEDOR(cod_prov).
+-- En ORDEN, el atributo cod_cli es clave foránea (FK) referenciando a CLIENTE(cod_cli).
+-- En DETALLE, los atributos num_orden y cod_prod son claves foráneas (FK) referenciando a ORDEN(num_orden) y PRODUCTO(cod_prod), respectivamente.
+
+-- Resolver los siguientes requerimientos utilizando sentencias DML:
+
+--1) Listar las tablas que existen en su propio usuario.
+
+
+-- Oracle:
+
+-- sql:
+
+SELECT table_name FROM user_tables;
+
+-- MySQL:
+
+-- sql:
+
+SHOW TABLES;
+
+
+-- PostgreSQL:
+
+-- sql:
+
+SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
+
+
+-- 2) Listar el nombre y tipo de los campos de la tabla detalle y orden.
+
+-- Oracle / PostgreSQL:
+-- sql:
+
+SELECT column_name, data_type 
+FROM information_schema.columns 
+WHERE table_name IN ('DETALLE', 'ORDEN');
+
+
+-- MySQL:
+-- sql:
+
+DESCRIBE DETALLE;
+DESCRIBE ORDEN;
+
+
+
+-- 3) Eliminar los detalles, órdenes y datos de los clientes residentes en Pando. Borrar los datos de
+-- cada una de esas tablas a la vez utilizando varias sentencias DML.
+
+DELETE FROM DETALLE WHERE num_orden IN (SELECT num_orden FROM ORDEN WHERE cod_cli IN (SELECT cod_cli FROM CLIENTE WHERE ciudad = 'Pando'));
+
+DELETE FROM ORDEN WHERE cod_cli IN (SELECT cod_cli FROM CLIENTE WHERE ciudad = 'Pando');
+
+DELETE FROM CLIENTE WHERE ciudad = 'Pando';
+
+
+
+-- 4) Insertar un nuevo producto del proveedor 2002 cuyo código es 170, su nombre Producto170 y su precio $100.
+
+
+INSERT INTO PRODUCTO (cod_prod, nombre, precio, cod_prov) 
+VALUES (170, 'Producto170', 100, 2002);
+
+
+-- 5) Eliminar los detalles y luego las ordenes entregadas entre el 20 y 21 de abril de este año. Utilizar varias sentencias DML.
+
+DELETE FROM DETALLE WHERE num_orden IN 
+(SELECT num_orden FROM ORDEN WHERE fecha_entrega BETWEEN '2025-04-20' AND '2025-04-21');
+
+DELETE FROM ORDEN WHERE fecha_entrega BETWEEN '2025-04-20' AND '2025-04-21';
+
+
+
+-- 6) Rebajar un 5% el precio de los productos que no fueron ordenados en los últimos dos meses.
+
+UPDATE PRODUCTO 
+SET precio = precio * 0.95 
+WHERE cod_prod NOT IN 
+(SELECT DISTINCT cod_prod FROM DETALLE 
+JOIN ORDEN ON DETALLE.num_orden = ORDEN.num_orden 
+WHERE fecha_orden >= CURRENT_DATE - INTERVAL '2 months');
+
+
+-- 7) Eliminar los clientes que no hayan efectuado órdenes.
+
+DELETE FROM CLIENTE WHERE cod_cli NOT IN (SELECT DISTINCT cod_cli FROM ORDEN);
+
+
+
+-- 8) Las ordenes entregadas el 1 de abril de este año no llegaron a destino por lo cual se debe dejar en nulo la fecha de entrega.
+
+UPDATE ORDEN 
+SET fecha_entrega = NULL 
+WHERE fecha_entrega = '2025-04-01';
+
+
+-- 9) Aumentar un 1,1% el precio de todos los productos del proveedor 2002.
+
+UPDATE PRODUCTO 
+SET precio = precio * 1.011 
+WHERE cod_prov = 2002;
+
+
+-- 10) Borrar el cliente 1011 si tiene el campo ciudad con datos.
+
+DELETE FROM CLIENTE WHERE cod_cli = 1011 AND ciudad IS NOT NULL;
+
+
+-- 11) Insertar una nueva orden cuyo número es 5009 emitida para el cliente 107 el día 01/04/2005 que
+-- todavía no fue entregada. Dicha orden fue realizada por 50 unidades del producto 170.
+
+INSERT INTO ORDEN (num_orden, cod_cli, fecha_orden, fecha_entrega) 
+VALUES (5009, 107, '2005-04-01', NULL);
+
+INSERT INTO DETALLE (num_orden, cod_prod, cantidad) 
+VALUES (5009, 170, 50);
+
+
+-- 12) Ya que todas las órdenes sin entregar se realizaron el día de hoy actualizar la fecha de entrega. 
+
+
+UPDATE ORDEN 
+SET fecha_entrega = CURRENT_DATE 
+WHERE fecha_entrega IS NULL;
+
+
